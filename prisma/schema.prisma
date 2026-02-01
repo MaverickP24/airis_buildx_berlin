@@ -26,5 +26,14 @@ model Sale {
   quantity     Int
   totalAmount  Float
   date         DateTime @default(now())
+  paymentMode  String   @default("CASH") // CASH | UPI
   createdAt    DateTime @default(now())
+}
+
+model Expense {
+  id        Int      @id @default(autoincrement())
+  title     String
+  amount    Float
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
 }

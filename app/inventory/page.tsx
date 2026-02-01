@@ -116,7 +116,7 @@ export default function Inventory() {
                 )}
 
                 {/* Categorized Product List */}
-                <div className="space-y-6">
+                <div className="space-y-8 pb-10">
                     {Object.entries(
                         filtered.reduce((acc: any, product) => {
                             const cat = product.category || "Miscellaneous";
@@ -124,39 +124,61 @@ export default function Inventory() {
                             acc[cat].push(product);
                             return acc;
                         }, {}) as Record<string, any[]>
-                    ).map(([category, items]) => (
-                        <div key={category}>
-                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">{category}</h3>
-                            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 font-medium">
-                                        <tr>
-                                            <th className="px-4 py-2">Item</th>
-                                            <th className="px-4 py-2 text-right">Price</th>
-                                            <th className="px-4 py-2 text-right">Qty</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                        {items.map((product) => (
-                                            <tr key={product.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-                                                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{product.name}</td>
-                                                <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">₹{product.costPrice}</td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <span className={cn("font-bold px-2 py-0.5 rounded text-xs", product.stock < 10 ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600")}>
-                                                        {product.stock}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                    ).sort().map(([category, items]) => (
+                        <div key={category} className="space-y-3">
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">{category}</h3>
+                            <div className="grid gap-3">
+                                {items.map((product) => {
+                                    const stockPercent = Math.min(100, (product.stock / 50) * 100);
+                                    const isLow = product.stock < 10;
+                                    return (
+                                        <div key={product.id} className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 card-shadow group transition-all hover:translate-x-1">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <h4 className="font-bold text-slate-900 dark:text-white capitalize">{product.name}</h4>
+                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">₹{product.costPrice} • Unit Price</p>
+                                                </div>
+                                                <div className={cn(
+                                                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                                                    isLow ? "bg-red-50 text-red-600 dark:bg-red-900/20" : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20"
+                                                )}>
+                                                    {isLow ? 'Low Stock' : 'In Stock'}
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-end">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase italic">{product.stock} Units left</span>
+                                                    <span className="text-xs font-black text-slate-900 dark:text-white">₹{product.costPrice}</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={cn(
+                                                            "h-full rounded-full transition-all duration-1000",
+                                                            isLow ? "bg-amber-500" : "bg-emerald-500"
+                                                        )}
+                                                        style={{ width: `${stockPercent}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     ))}
 
-                    {filtered.length === 0 && <p className="text-center text-gray-400 py-10">No products found.</p>}
+                    {filtered.length === 0 && (
+                        <div className="text-center py-20 opacity-40">
+                            <div className="inline-block p-4 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
+                                <Search className="h-8 w-8 text-slate-400" />
+                            </div>
+                            <p className="text-sm font-bold text-slate-500">No products matching your search</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </main>
     );
 }
+

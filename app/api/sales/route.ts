@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     let totalItems = 0;
     let totalCost = 0;
 
-    sales.forEach(sale => {
+    sales.forEach((sale: any) => {
        totalSales += sale.totalAmount;
        totalItems += sale.quantity;
        totalCost += (sale.product.costPrice * sale.quantity);
@@ -54,21 +54,22 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { items } = await req.json(); 
+    const { items, paymentMode } = await req.json(); 
     if (!items || !Array.isArray(items)) {
         return NextResponse.json({ error: "Invalid items" }, { status: 400 });
     }
 
-    const results = [];
+    const results: any[] = [];
     
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       for (const item of items) {
         // Create Sale
         const sale = await tx.sale.create({
           data: {
             productId: parseInt(item.productId),
             quantity: parseInt(item.quantity),
-            totalAmount: parseFloat(item.totalAmount)
+            totalAmount: parseFloat(item.totalAmount),
+            paymentMode: paymentMode || "CASH"
           }
         });
 
