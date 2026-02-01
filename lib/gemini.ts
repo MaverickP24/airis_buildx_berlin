@@ -1,0 +1,14 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const apiKey = process.env.GEMINI_API_KEY;
+
+if (!apiKey) {
+  console.warn("GEMINI_API_KEY is not set in environment variables.");
+}
+
+const genAI = new GoogleGenerativeAI(apiKey || "dummy_key");
+
+export const model = genAI.getGenerativeModel({ 
+  model: "gemini-flash-latest",
+  generationConfig: { responseMimeType: "application/json" } // Force JSON
+});
