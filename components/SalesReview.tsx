@@ -72,16 +72,23 @@ export default function SalesReview({ initialItems, onCancel, onSuccess, product
 
         setIsSubmitting(true);
         try {
-            const validItems = items.filter(i => i.productId); // Only items with IDs
+            // Check for negative inventory on EXISTING products
+            let autoAdjustStock = false;
+            const stockCheckFailedItems = items.filter(it => {
+                const prod = products.find(p => p.id === it.productId);
+                return prod && it.quantity > prod.stock;
+            });
 
-            if (validItems.length === 0) {
-                alert("No valid inventory products found. Please add products to Inventory first.");
-                setIsSubmitting(false);
-                return;
-            }
+            if (stockCheckFailedItems.length > 0) {
+                const itemNames = stockCheckFailedItems.map(it => it.productName).join(", ");
+                const proceed = confirm(
+                    `Inventory mismatch: ${itemNames} ${stockCheckFailedItems.length > 1 ? 'have' : 'has'} less stock than you're selling. \n\nShould I increase the stock to match this sale and proceed?`
+                );
 
-            if (validItems.length !== items.length) {
-                if (!confirm(`${items.length - validItems.length} items are not in inventory and will be ignored. Continue?`)) {
+                if (proceed) {
+                    autoAdjustStock = true;
+                } else {
+                    alert("Submission cancelled to prevent negative inventory.");
                     setIsSubmitting(false);
                     return;
                 }
@@ -89,9 +96,16 @@ export default function SalesReview({ initialItems, onCancel, onSuccess, product
 
             const res = await fetch('/api/sales', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    items: validItems.map(it => ({ ...it, productId: it.productId })), // Use validItems here
-                    paymentMode
+                    items: items.map(it => ({
+                        productId: it.productId,
+                        productName: it.productName,
+                        quantity: it.quantity,
+                        totalAmount: it.totalAmount
+                    })),
+                    paymentMode,
+                    autoAdjustStock
                 }),
             });
 
@@ -113,103 +127,110 @@ export default function SalesReview({ initialItems, onCancel, onSuccess, product
 
     if (isSuccess) {
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                <div className="bg-white dark:bg-slate-900 w-full max-w-sm p-12 rounded-[2.5rem] card-shadow flex flex-col items-center text-center space-y-4 animate-in zoom-in-95">
-                    <div className="h-20 w-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                        <Sparkles className="h-10 w-10 text-emerald-600 animate-pulse" />
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+                <div className="bg-white w-full max-w-sm p-12 rounded-[3.5rem] shadow-2xl flex flex-col items-center text-center space-y-6 animate-in zoom-in-95">
+                    <div className="h-24 w-24 bg-emerald-50 rounded-full flex items-center justify-center">
+                        <Sparkles className="h-12 w-12 text-emerald-500 animate-pulse" />
                     </div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">Sale Recorded!</h3>
-                    <p className="text-sm text-slate-500 font-medium tracking-tight">Intelligence engine updated successfully</p>
+                    <div>
+                        <h3 className="text-3xl font-black text-gray-900 tracking-tighter">Success!</h3>
+                        <p className="text-sm font-bold text-gray-400 mt-2 uppercase tracking-widest leading-loose">Ledger updated & synchronized.</p>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-md p-8 rounded-[2.5rem] card-shadow border border-slate-100 dark:border-slate-800 space-y-6 animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-md p-10 rounded-t-[3.5rem] shadow-2xl space-y-8 animate-in slide-in-from-bottom-full duration-500 overflow-y-auto max-h-[95vh] selection:bg-primary/20">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">Review Sale</h3>
-                        <p className="text-xs text-slate-500 font-medium">Please verify items and payment</p>
+                        <h3 className="text-3xl font-black text-gray-900 tracking-tight">Review Sale</h3>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Audit Entry before finalizing</p>
                     </div>
-                    <button onClick={onCancel} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                        <X className="h-5 w-5 text-slate-400" />
+                    <button onClick={onCancel} className="h-12 w-12 bg-gray-50 rounded-2xl flex items-center justify-center">
+                        <X className="h-6 w-6 text-gray-400" />
                     </button>
                 </div>
 
-                {/* Payment Mode */}
-                <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl">
-                    <button
-                        onClick={() => setPaymentMode("CASH")}
-                        className={cn(
-                            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all",
-                            paymentMode === "CASH"
-                                ? "bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white"
-                                : "text-slate-500 hover:text-slate-700"
-                        )}
-                    >
-                        <IndianRupee className="h-3.5 w-3.5" /> CASH
-                    </button>
-                    <button
-                        onClick={() => setPaymentMode("UPI")}
-                        className={cn(
-                            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all",
-                            paymentMode === "UPI"
-                                ? "bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white"
-                                : "text-slate-500 hover:text-slate-700"
-                        )}
-                    >
-                        <Sparkles className="h-3.5 w-3.5" /> UPI
-                    </button>
+                {/* Payment Selection - Clean Minimalist style */}
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Payment Channel</label>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => setPaymentMode("CASH")}
+                            className={cn(
+                                "flex-1 h-16 rounded-[1.5rem] flex items-center justify-center gap-3 font-black text-sm transition-all border-2",
+                                paymentMode === "CASH"
+                                    ? "bg-primary/5 border-primary text-primary shadow-lg shadow-primary/5 scale-[1.02]"
+                                    : "bg-gray-50 border-transparent text-gray-400 hover:border-gray-200"
+                            )}
+                        >
+                            <IndianRupee className="h-4 w-4" /> CASH
+                        </button>
+                        <button
+                            onClick={() => setPaymentMode("UPI")}
+                            className={cn(
+                                "flex-1 h-16 rounded-[1.5rem] flex items-center justify-center gap-3 font-black text-sm transition-all border-2",
+                                paymentMode === "UPI"
+                                    ? "bg-primary/5 border-primary text-primary shadow-lg shadow-primary/5 scale-[1.02]"
+                                    : "bg-gray-50 border-transparent text-gray-400 hover:border-gray-200"
+                            )}
+                        >
+                            <Sparkles className="h-4 w-4" /> UPI
+                        </button>
+                    </div>
                 </div>
 
-                <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-6 max-h-[40vh] overflow-y-auto pr-2 no-scrollbar">
                     {items.map((item, idx) => {
                         const isMatched = !!item.productId;
                         return (
                             <div key={idx} className={cn(
-                                "p-4 rounded-2xl border transition-all",
+                                "p-6 rounded-[2.5rem] border transition-all relative overflow-hidden group",
                                 isMatched
-                                    ? "bg-slate-50 border-slate-100 dark:bg-slate-800/50 dark:border-slate-700"
-                                    : "bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30"
+                                    ? "bg-gray-50 border-gray-100"
+                                    : "bg-red-50/50 border-red-100"
                             )}>
-                                <div className="flex justify-between items-start mb-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className={cn("p-1.5 rounded-lg", isMatched ? "bg-white dark:bg-slate-700" : "bg-white dark:bg-red-900/40")}>
-                                            <Package className={cn("h-4 w-4", isMatched ? "text-slate-400" : "text-red-500")} />
+                                {!isMatched && <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest">Unlinked</div>}
+
+                                <div className="flex justify-between items-center mb-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center flex-shrink-0", isMatched ? "bg-white text-gray-400" : "bg-white text-red-500")}>
+                                            <Package className="h-6 w-6" />
                                         </div>
                                         <div>
-                                            <p className="font-bold text-sm text-slate-900 dark:text-white capitalize">{item.productName}</p>
-                                            {!isMatched && <span className="text-[9px] text-red-500 font-extrabold uppercase tracking-tighter">Unknown Item</span>}
+                                            <p className="font-black text-gray-900 tracking-tight capitalize leading-tight">{item.productName}</p>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Line {idx + 1}</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => handleRemove(idx)} className="text-slate-300 hover:text-red-500 transition-colors px-1">
-                                        <X className="h-4 w-4" />
+                                    <button onClick={() => handleRemove(idx)} className="h-10 w-10 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors">
+                                        <X className="h-5 w-5" />
                                     </button>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] text-slate-400 uppercase font-black tracking-widest pl-1">Qty</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Qty</label>
                                         <input
                                             type="number"
                                             min="1"
-                                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary outline-none transition-all"
+                                            className="w-full h-14 px-5 bg-white border-none rounded-2xl text-sm font-black text-gray-900 focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
                                             value={item.quantity}
                                             onChange={(e) => updateItem(idx, 'quantity', parseInt(e.target.value) || 0)}
                                         />
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] text-slate-400 uppercase font-black tracking-widest pl-1">Amount</label>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Amount</label>
                                         <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-sm">₹</span>
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 font-bold text-sm">₹</span>
                                             <input
                                                 type="number"
                                                 min="0"
                                                 className={cn(
-                                                    "w-full pl-6 pr-3 py-2 bg-white dark:bg-slate-900 border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary outline-none transition-all",
-                                                    item.totalAmount === 0 ? "border-red-500 ring-2 ring-red-500/10" : "border-slate-100 dark:border-slate-700"
+                                                    "w-full h-14 pl-8 pr-4 bg-white border-none rounded-2xl text-sm font-extra shadow-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all font-black text-gray-900",
+                                                    item.totalAmount === 0 && "ring-2 ring-red-500/20"
                                                 )}
                                                 value={item.totalAmount}
                                                 onChange={(e) => updateItem(idx, 'totalAmount', parseFloat(e.target.value) || 0)}
@@ -220,27 +241,22 @@ export default function SalesReview({ initialItems, onCancel, onSuccess, product
                             </div>
                         );
                     })}
-                    {items.length === 0 && (
-                        <div className="text-center py-8">
-                            <p className="text-sm text-slate-400 font-medium">No items found</p>
-                        </div>
-                    )}
                 </div>
 
-                <div className="flex flex-col gap-3 pt-4">
+                <div className="space-y-4 pt-6">
                     <button
                         onClick={confirmSale}
                         disabled={isSubmitting || items.length === 0}
-                        className="w-full h-14 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 disabled:scale-100 flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/20"
+                        className="w-full h-20 bg-primary text-white rounded-[2.5rem] font-black text-sm tracking-[0.2em] uppercase shadow-2xl shadow-primary/20 hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-20 flex items-center justify-center gap-3"
                     >
-                        {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
-                        Confirm Final Sale
+                        {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />}
+                        Confirm Final
                     </button>
                     <button
                         onClick={onCancel}
-                        className="w-full py-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                        className="w-full py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-red-500 transition-colors"
                     >
-                        Discard Entry
+                        Discard Transaction
                     </button>
                 </div>
             </div>

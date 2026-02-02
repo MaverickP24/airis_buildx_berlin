@@ -37,3 +37,10 @@ model Expense {
   date      DateTime @default(now())
   createdAt DateTime @default(now())
 }
+
+model DailySummary {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @default(now())
+  summaryText String
+  createdAt   DateTime @default(now())
+}

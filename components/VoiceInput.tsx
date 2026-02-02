@@ -61,74 +61,62 @@ export default function VoiceInput({ onTranscript, isProcessing }: VoiceInputPro
     };
 
     return (
-        <div className="relative group overflow-hidden bg-white dark:bg-slate-900 rounded-[2.5rem] card-shadow border border-slate-100 dark:border-slate-800 p-8 max-w-md mx-auto w-full transition-all">
-            {/* Background Decorative Element */}
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/20 transition-all duration-500"></div>
+        <div className="bg-white rounded-[2.5rem] shadow-sm border-none p-10 max-w-md mx-auto w-full transition-all group overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-10 -mt-10 group-hover:bg-primary/10 transition-all duration-500" />
 
             <div className="flex flex-col items-center relative z-10">
-                <div className="flex items-center gap-2 mb-8 bg-violet-50 dark:bg-violet-900/30 px-3 py-1 rounded-full">
-                    <Sparkles className="h-3 w-3 text-violet-600 dark:text-violet-400" />
-                    <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest">Smart Voice Entry</span>
-                </div>
-
-                {/* Microphone Button Container */}
-                <div className="relative mb-8">
-                    {/* Animated Pulse Rings */}
+                {/* Microphone Ring */}
+                <div className="relative mb-10">
                     {isListening && (
-                        <>
-                            <div className="absolute inset-0 rounded-full bg-primary/20 animate-pulse-ring scale-125"></div>
-                            <div className="absolute inset-0 rounded-full bg-primary/10 animate-pulse-ring scale-150 [animation-delay:0.5s]"></div>
-                        </>
+                        <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping scale-150" />
                     )}
 
                     <button
                         onClick={toggleListening}
                         disabled={isProcessing}
                         className={cn(
-                            "relative h-24 w-24 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl z-20",
+                            "relative h-28 w-28 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl z-20",
                             isListening
-                                ? "bg-red-500 hover:bg-red-600 ring-8 ring-red-500/10"
-                                : "bg-primary hover:bg-primary/90 shadow-primary/40"
+                                ? "bg-red-500 hover:bg-red-600 shadow-red-500/20"
+                                : "bg-primary hover:bg-primary/95 shadow-primary/30"
                         )}
                     >
                         {isProcessing ? (
                             <Loader2 className="h-10 w-10 text-white animate-spin" />
                         ) : isListening ? (
-                            <Square className="h-8 w-8 text-white animate-in zoom-in duration-300" />
+                            <Square className="h-10 w-10 text-white animate-in zoom-in duration-300" />
                         ) : (
-                            <Mic className="h-10 w-10 text-white animate-in zoom-in duration-300" />
+                            <Mic className="h-12 w-12 text-white animate-in zoom-in duration-300" />
                         )}
                     </button>
 
-                    {/* Status Indicator */}
-                    <div className={cn(
-                        "absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm transition-all duration-300",
-                        isListening ? "bg-red-500 text-white opacity-100 translate-y-0" : "bg-white text-slate-400 opacity-0 translate-y-2"
-                    )}>
-                        LISTENING
-                    </div>
+                    {isListening && (
+                        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest animate-bounce">
+                            Live Listening
+                        </div>
+                    )}
                 </div>
 
-                <div className="text-center mb-8 space-y-2">
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Record Sale</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 max-w-[200px]">
-                        Just say item names and quantities
+                <div className="text-center mb-10 space-y-2">
+                    <h3 className="text-2xl font-black text-gray-900 tracking-tight">Record Business</h3>
+                    <p className="text-sm font-medium text-gray-400">
+                        "2 packet Maggi 24 rupaye cash mein"
                     </p>
                 </div>
 
-                <div className="w-full space-y-4">
+                <div className="w-full space-y-5">
                     <div className="relative group/input">
                         <textarea
                             value={transcript}
                             onChange={(e) => setTranscript(e.target.value)}
-                            placeholder="Voice transcript will appear here..."
-                            className="w-full min-h-[100px] p-4 text-sm rounded-2xl border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                            placeholder="Transcript will appear here as you speak..."
+                            className="w-full min-h-[120px] p-6 text-sm font-bold rounded-3xl border-none bg-gray-50 text-gray-900 placeholder:text-gray-300 resize-none focus:ring-2 focus:ring-primary/20 outline-none transition-all leading-relaxed"
                             disabled={isProcessing}
                         />
                         {transcript && (
                             <button
                                 onClick={() => setTranscript("")}
-                                className="absolute top-2 right-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase"
+                                className="absolute top-4 right-4 text-[10px] font-black text-gray-300 hover:text-red-500 uppercase tracking-widest transition-colors"
                             >
                                 Clear
                             </button>
@@ -138,10 +126,10 @@ export default function VoiceInput({ onTranscript, isProcessing }: VoiceInputPro
                     <button
                         onClick={handleSend}
                         disabled={!transcript.trim() || isProcessing}
-                        className="w-full h-14 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 disabled:hover:scale-100 flex items-center justify-center gap-2 shadow-xl"
+                        className="w-full h-16 bg-gray-900 text-white rounded-[2rem] font-black text-sm tracking-widest uppercase hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-20 flex items-center justify-center gap-3 shadow-xl shadow-gray-900/10"
                     >
-                        <Send className="h-4 w-4" />
-                        Save Entry
+                        <Send className="h-5 w-5" />
+                        Process Entry
                     </button>
                 </div>
             </div>

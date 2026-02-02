@@ -6,6 +6,7 @@ import { LayoutDashboard, Box, Settings, Sparkles, AlertCircle, TrendingUp, Pack
 import VoiceInput from "@/components/VoiceInput";
 import SalesReview from "@/components/SalesReview";
 import DashboardStats from "@/components/DashboardStats";
+import DailySummaryCard from "@/components/DailySummaryCard";
 
 export default function Home() {
   const [summary, setSummary] = useState({ totalSales: 0, totalItems: 0, totalProfit: 0 });
@@ -14,6 +15,8 @@ export default function Home() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [reviewItems, setReviewItems] = useState<any[] | null>(null);
+  const [dailySummary, setDailySummary] = useState<any>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   const [monthlyStats, setMonthlyStats] = useState<any>(null);
   const [expenseTitle, setExpenseTitle] = useState("");
@@ -140,215 +143,220 @@ export default function Home() {
     fetchData();
     fetchInsights();
     fetchAnomaly();
+    fetchDailySummary();
   }, []);
 
+  const fetchDailySummary = async () => {
+    try {
+      const res = await fetch('/api/daily-summary');
+      if (res.ok) {
+        const data = await res.json();
+        setDailySummary(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    setIsGeneratingSummary(true);
+    try {
+      const res = await fetch('/api/daily-summary', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setDailySummary(data);
+      }
+    } catch (e) {
+      alert("Failed to generate summary");
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-32 font-sans">
-      {/* Premium Navigation */}
-      <nav className="sticky top-0 z-40 glass border-b border-slate-200/50 dark:border-slate-800/50 px-6 py-4">
-        <div className="flex items-center justify-between max-w-md mx-auto w-full">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-              <Sparkles className="h-4 w-4 text-white" />
+    <main className="min-h-screen bg-gray-50 pb-32 font-sans selection:bg-primary/20">
+      {/* Asset Manager Style Header */}
+      <div className="bg-primary px-6 pt-20 pb-16 rounded-b-[2.5rem] shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-20 -mt-20 blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-400 opacity-10 rounded-full -ml-10 -mb-10 blur-2xl" />
+
+        <div className="max-w-md mx-auto relative z-10">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-white tracking-tight">
+                Namaste, Shop Owner! 👋
+              </h1>
+              <p className="text-blue-100 mt-2 font-medium opacity-90">Aaj ka business kaisa hai?</p>
             </div>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic">
-              Vyapar<span className="text-indigo-600">AI</span>
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Sync</span>
+            <div className="bg-white/20 backdrop-blur-md p-2 rounded-2xl border border-white/20">
+              <Sparkles className="h-5 w-5 text-white animate-pulse" />
+            </div>
           </div>
         </div>
-      </nav>
+      </div>
 
-      <div className="max-w-md mx-auto px-6 py-8 space-y-10">
+      <div className="max-w-md mx-auto px-4 pt-8 space-y-10 pb-20">
 
-        {/* Hero Section */}
-        <section className="space-y-1">
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-tight">
-            Store <span className="text-indigo-600">Snapshot</span>
-          </h2>
-          <p className="text-sm text-slate-500 font-medium">Real-time business performance</p>
-        </section>
+        {/* KPI Grid - Replicated from Asset Manager */}
+        <div className="space-y-4">
+          <div className="bg-white p-5 rounded-3xl shadow-sm border-none transition-all hover:shadow-md group">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Sales Today</p>
+                <h3 className="text-3xl font-black text-gray-900 tracking-tight">₹{summary.totalSales.toLocaleString()}</h3>
+                <p className="text-sm mt-1 font-bold text-emerald-600">+₹{summary.totalProfit.toLocaleString()} Profit</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-emerald-50 group-hover:bg-emerald-100 transition-colors">
+                <TrendingUp className="w-6 h-6 text-emerald-600" />
+              </div>
+            </div>
+          </div>
 
-        {/* Anomaly Notification */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white p-5 rounded-3xl shadow-sm border-none group transition-all hover:shadow-md">
+              <div className="flex justify-between items-start mb-2">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Items Sold</p>
+                <div className="p-2 rounded-xl bg-blue-50 group-hover:bg-blue-100 transition-colors">
+                  <Package className="w-4 h-4 text-blue-600" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-black text-gray-900">{summary.totalItems}</h3>
+              <p className="text-[10px] text-gray-400 mt-1">In {new Date().toLocaleDateString('en-IN', { month: 'short' })}</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-3xl shadow-sm border-none group transition-all hover:shadow-md">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Payment Split</p>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-bold">
+                    <span className="text-gray-500">UPI</span>
+                    <span className="text-indigo-600">₹{monthlyStats?.upiSales?.toLocaleString() || 0}</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.round(((monthlyStats?.upiSales || 0) / (monthlyStats?.totalSales || 1)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-bold">
+                    <span className="text-gray-500">CASH</span>
+                    <span className="text-emerald-600">₹{monthlyStats?.cashSales?.toLocaleString() || 0}</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.round(((monthlyStats?.cashSales || 0) / (monthlyStats?.totalSales || 1)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Anomaly Alert */}
         {anomaly && (
-          <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 p-5 rounded-3xl flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="p-2 bg-white dark:bg-slate-900 rounded-xl shadow-sm">
-              <AlertCircle className="h-5 w-5 text-amber-600" />
+          <div className="bg-amber-50 border border-amber-100 p-5 rounded-3xl flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <div className="p-3 bg-white rounded-2xl shadow-sm text-amber-600">
+              <AlertCircle className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1 italic">Vigilant Alert</p>
-              <p className="text-sm font-bold text-slate-800 dark:text-amber-100">{anomaly}</p>
+              <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1 italic">Attention Required</p>
+              <p className="text-sm font-bold text-amber-900 leading-tight">{anomaly}</p>
             </div>
           </div>
         )}
 
-        {/* KPI Grid */}
-        <DashboardStats summary={summary} lowStockCount={lowStockCount} />
-
-        {/* Monthly Performance Section */}
+        {/* Daily Summary - WhatsApp Style Digest */}
         <section className="space-y-4">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Monthly Performance</h3>
-            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">February 2026</span>
-          </div>
-
-          <div className="bg-slate-900 dark:bg-slate-900 rounded-[2.5rem] p-8 text-white card-shadow relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-              <TrendingUp className="h-32 w-32" />
-            </div>
-
-            <div className="relative z-10 space-y-8">
-              {monthlyStats ? (
-                <>
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Net Profit</p>
-                      <p className="text-3xl font-black tracking-tight">₹{monthlyStats.netProfit.toLocaleString()}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Expenses</p>
-                      <p className="text-3xl font-black tracking-tight text-red-400">₹{monthlyStats.totalExpenses.toLocaleString()}</p>
-                    </div>
-                  </div>
-
-                  <div className="h-px w-full bg-white/10"></div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Best Selling</p>
-                      {monthlyStats.bestSeller ? (
-                        <div className="flex items-center gap-2">
-                          <div className="h-6 w-6 bg-white/10 rounded-lg flex items-center justify-center">
-                            <Package className="h-3 w-3 text-white" />
-                          </div>
-                          <span className="text-sm font-bold">{monthlyStats.bestSeller.name}</span>
-                        </div>
-                      ) : (
-                        <span className="text-sm font-medium text-slate-500 italic">No sales yet</span>
-                      )}
-                    </div>
-                    <div className="text-right space-y-2">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mode Split</p>
-                      <div className="flex gap-4 text-xs font-bold">
-                        <span className="text-emerald-400">UPI: {Math.round((monthlyStats.upiSales / (monthlyStats.totalSales || 1)) * 100)}%</span>
-                        <span className="text-slate-400">CASH: {Math.round((monthlyStats.cashSales / (monthlyStats.totalSales || 1)) * 100)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </>
+            <h3 className="text-lg font-bold text-gray-800">Today's Digest 📝</h3>
+            <button
+              onClick={handleGenerateSummary}
+              disabled={isGeneratingSummary}
+              className="text-[10px] font-black text-primary bg-primary/10 px-3 py-1.5 rounded-full hover:bg-primary/20 transition-all disabled:opacity-50"
+            >
+              {isGeneratingSummary ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                <div className="py-10 text-center opacity-40">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                  <p className="text-xs font-bold uppercase tracking-widest">Calibrating Stats...</p>
-                </div>
+                "REFRESH"
               )}
-            </div>
+            </button>
           </div>
+
+          {dailySummary ? (
+            <DailySummaryCard
+              summary={dailySummary.summaryText}
+              date={new Date(dailySummary.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+            />
+          ) : (
+            <div
+              onClick={handleGenerateSummary}
+              className="bg-white p-8 rounded-[2.5rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 transition-all"
+            >
+              <div className="h-12 w-12 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <Sparkles className="h-6 w-6 text-gray-300" />
+              </div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest italic leading-relaxed">
+                Unlock Today's Business Briefing<br />
+                <span className="text-[10px] text-primary mt-2 block font-black underline">GENERATE NOW</span>
+              </p>
+            </div>
+          )}
         </section>
 
-        {/* AI Insight Cards */}
+        {/* AI Smart Insights */}
         <section className="space-y-4">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">AI Intelligence</h3>
-          <div className="grid gap-3">
+          <h3 className="text-lg font-bold text-gray-800 px-1">AI Smart Tips 💡</h3>
+          <div className="grid gap-4">
             {insights.length > 0 ? (
               insights.map((insight, idx) => (
-                <div key={idx} className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 card-shadow flex gap-4 items-start group">
-                  <div className="p-3 bg-violet-50 dark:bg-violet-900/30 rounded-2xl group-hover:scale-110 transition-transform">
-                    <Sparkles className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                <div key={idx} className="bg-white p-5 rounded-3xl border-none shadow-sm flex gap-4 items-start group hover:shadow-md transition-all">
+                  <div className="p-3 bg-primary/5 rounded-2xl group-hover:scale-110 transition-transform">
+                    <Sparkles className="h-5 w-5 text-primary" />
                   </div>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 leading-relaxed pt-1">
-                    {insight}
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold text-gray-700 leading-relaxed">
+                      {insight}
+                    </p>
+                    <span className="inline-block text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md uppercase tracking-widest">
+                      Smart Hint
+                    </span>
+                  </div>
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest italic">Collecting Intelligence...</p>
+              <div className="p-8 text-center bg-white rounded-3xl shadow-sm italic text-xs font-bold text-gray-400 uppercase tracking-widest">
+                Scanning patterns...
               </div>
             )}
           </div>
         </section>
 
-        {/* Smart Entry Area */}
-        <section className="space-y-4">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Entry Engine</h3>
-          {!reviewItems ? (
-            <VoiceInput onTranscript={handleTranscript} isProcessing={isProcessing} />
-          ) : (
-            <SalesReview
-              initialItems={reviewItems}
-              products={products}
-              onCancel={() => setReviewItems(null)}
-              onSuccess={() => {
-                setReviewItems(null);
-                fetchData();
-              }}
-            />
-          )}
-        </section>
-
-        {/* Premium Q&A System */}
-        <section className="space-y-4 pb-12">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Business Intelligence Agent</h3>
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] card-shadow border border-slate-100 dark:border-slate-800 space-y-6">
-            <div className="min-h-[80px] bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-4 w-4 bg-indigo-600 rounded-md flex items-center justify-center">
-                  <Sparkles className="h-2 w-2 text-white" />
-                </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Response</span>
-              </div>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-relaxed italic">
-                {answer || "Ask anything: 'How much profit today?' or 'What is my top product?'"}
-              </p>
-            </div>
-            <div className="relative group">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleQuery()}
-                type="text"
-                placeholder="Type your query here..."
-                className="w-full h-14 pl-5 pr-16 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-primary outline-none transition-all"
-              />
-              <button
-                onClick={handleQuery}
-                className="absolute right-2 top-2 h-10 px-4 bg-indigo-600 text-white rounded-xl text-[10px] font-black tracking-widest uppercase hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20"
-              >
-                QUERY
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Global Expense Entry */}
+        {/* Minimalist Expense Entry */}
         <section className="space-y-4 pb-20">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Cost Tracking</h3>
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] card-shadow border border-slate-100 dark:border-slate-800 flex gap-4 items-center">
+          <h3 className="text-lg font-bold text-gray-800 px-1">Quick Kharcha Entry 💸</h3>
+          <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border-none flex gap-3 items-center">
             <input
               type="text"
-              placeholder="Describe expense..."
-              className="flex-1 h-12 px-4 text-sm font-bold border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all"
+              placeholder="Tea, Rent, etc."
+              className="flex-1 h-12 px-5 text-sm font-bold border-none bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all"
               value={expenseTitle}
               onChange={(e) => setExpenseTitle(e.target.value)}
             />
-            <div className="relative w-24">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-sm">₹</span>
-              <input
-                type="number"
-                placeholder="0"
-                className="w-full h-12 pl-6 pr-3 text-sm font-bold border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all"
-                value={expenseAmount}
-                onChange={(e) => setExpenseAmount(e.target.value)}
-              />
-            </div>
+            <input
+              type="number"
+              placeholder="₹"
+              className="w-20 h-12 px-4 text-sm font-bold border-none bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all"
+              value={expenseAmount}
+              onChange={(e) => setExpenseAmount(e.target.value)}
+            />
             <button
               onClick={handleAddExpense}
               disabled={isAddingExpense}
-              className="h-12 w-12 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-2xl flex items-center justify-center font-black hover:bg-red-100 transition-all border border-red-100 dark:border-red-900/30"
+              className="h-12 w-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center font-black hover:bg-red-100 transition-all border border-red-100 flex-shrink-0"
             >
               {isAddingExpense ? <Loader2 className="h-4 w-4 animate-spin" /> : "+"}
             </button>
@@ -357,35 +365,31 @@ export default function Home() {
 
       </div>
 
-      {/* Floating Bottom Navigation */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50">
-        <nav className="glass rounded-[2rem] p-2 flex items-center justify-between border border-white/20 dark:border-white/10 shadow-2xl">
-          <Link href="/" className="flex-1 flex flex-col items-center gap-1 py-3 group">
-            <div className="p-2 rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-600/30 group-active:scale-95 transition-all text-white">
-              <LayoutDashboard className="h-5 w-5" />
+      {/* Replicated Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 pb-safe shadow-[0_-8px_30px_rgb(0,0,0,0.05)] z-50">
+        <div className="flex justify-around items-center h-20 max-w-md mx-auto">
+          <Link href="/" className="flex flex-col items-center justify-center space-y-1 w-full text-primary group">
+            <div className="p-2 rounded-2xl bg-primary/5 group-hover:bg-primary/10 transition-all">
+              <LayoutDashboard className="w-6 h-6" strokeWidth={2.5} />
             </div>
-            <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Hub</span>
+            <span className="text-[10px] font-black uppercase tracking-tighter">Home</span>
           </Link>
 
-          <div className="w-px h-8 bg-slate-200/50 dark:bg-slate-800/50"></div>
-
-          <Link href="/inventory" className="flex-1 flex flex-col items-center gap-1 py-3 group">
-            <div className="p-2 rounded-2xl bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-400 hover:text-indigo-600">
-              <Box className="h-5 w-5" />
+          <Link href="/assistant" className="flex flex-col items-center justify-center space-y-1 w-full text-gray-400 hover:text-gray-600 transition-all group">
+            <div className="p-2 rounded-2xl transition-all">
+              <Sparkles className="w-6 h-6" strokeWidth={2} />
             </div>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">Stock</span>
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Assistant</span>
           </Link>
 
-          <div className="w-px h-8 bg-slate-200/50 dark:bg-slate-800/50"></div>
-
-          <div className="flex-1 flex flex-col items-center gap-1 py-3 opacity-30 cursor-not-allowed">
-            <div className="p-2 rounded-2xl bg-transparent text-slate-400">
-              <Settings className="h-5 w-5" />
+          <Link href="/inventory" className="flex flex-col items-center justify-center space-y-1 w-full text-gray-400 hover:text-gray-600 transition-all group">
+            <div className="p-2 rounded-2xl transition-all">
+              <Package className="w-6 h-6" strokeWidth={2} />
             </div>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Setup</span>
-          </div>
-        </nav>
-      </div>
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Stock</span>
+          </Link>
+        </div>
+      </nav>
     </main>
   );
 }

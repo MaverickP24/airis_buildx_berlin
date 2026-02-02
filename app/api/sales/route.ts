@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { items, paymentMode } = await req.json(); 
+    const { items, paymentMode, autoAdjustStock } = await req.json(); 
     if (!items || !Array.isArray(items)) {
         return NextResponse.json({ error: "Invalid items" }, { status: 400 });
     }
@@ -63,25 +63,65 @@ export async function POST(req: NextRequest) {
     
     await prisma.$transaction(async (tx: any) => {
       for (const item of items) {
-        // Create Sale
+        let productId = item.productId ? parseInt(item.productId) : null;
+        const qtyToSell = parseInt(item.quantity);
+        const totalAmount = parseFloat(item.totalAmount);
+        const unitPrice = totalAmount / qtyToSell;
+
+        // 1. If no productId, create the product automatically
+        if (!productId) {
+          const newProduct = await tx.product.create({
+            data: {
+              name: item.productName || "Unnamed Product",
+              costPrice: unitPrice * 0.7, // Assume 30% margin default
+              sellingPrice: unitPrice,
+              stock: qtyToSell, // Set initial stock to match sale so it ends at 0
+              category: "Miscellaneous"
+            }
+          });
+          productId = newProduct.id;
+        }
+
+        // 2. Handle Stock Adjustment if requested
+        if (autoAdjustStock) {
+            const currentProduct = await tx.product.findUnique({
+                where: { id: productId }
+            });
+            if (currentProduct && currentProduct.stock < qtyToSell) {
+                await tx.product.update({
+                    where: { id: productId },
+                    data: { stock: qtyToSell }
+                });
+            }
+        }
+
+        // 3. Create Sale
         const sale = await tx.sale.create({
           data: {
-            productId: parseInt(item.productId),
-            quantity: parseInt(item.quantity),
-            totalAmount: parseFloat(item.totalAmount),
+            productId: productId,
+            quantity: qtyToSell,
+            totalAmount: totalAmount,
             paymentMode: paymentMode || "CASH"
           }
         });
 
-        // Update Stock
-        await tx.product.update({
-          where: { id: parseInt(item.productId) },
+        // 4. Update Stock (Decrement)
+        const updatedProduct = await tx.product.update({
+          where: { id: productId },
           data: {
             stock: {
-              decrement: parseInt(item.quantity)
+                decrement: qtyToSell
             }
           }
         });
+
+        // 5. Safety Net: Fix negative stock if it somehow happened
+        if (updatedProduct.stock < 0) {
+            await tx.product.update({
+                where: { id: productId },
+                data: { stock: 0 }
+            });
+        }
         results.push(sale);
       }
     });
